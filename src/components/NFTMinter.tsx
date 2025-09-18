@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core'
-import { ethers } from 'ethers'
-
-// Extend window object to include ethereum
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
+import { useTransactionHistory } from '../contexts/TransactionContext'
+import { celebrateSuccess } from '../utils/confetti'
 
 // Embed the ABI directly for now (will be replaced with actual deployment)
 const DynamicNFTABI = [
@@ -30,6 +24,7 @@ const NFT_CONTRACTS = {
 
 const NFTMinter = () => {
   const { primaryWallet } = useDynamicContext()
+  const { addActivity } = useTransactionHistory()
   const [recipient, setRecipient] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [txHash, setTxHash] = useState('')
@@ -42,14 +37,14 @@ const NFTMinter = () => {
     try {
       console.log('Primary wallet:', primaryWallet)
       console.log('Wallet address:', primaryWallet.address)
-      console.log('Wallet chain:', primaryWallet.connector?.chain)
+      console.log('Wallet chain:', (primaryWallet.connector as any)?.chain)
       console.log('Available properties:', Object.keys(primaryWallet))
       
       // Use Dynamic's native wallet connector directly
       console.log('🔄 Trying Dynamic native wallet methods...')
       
       // Get the provider from Dynamic's wallet
-      const walletClient = await primaryWallet.getWalletClient()
+      const walletClient = await (primaryWallet as any).getWalletClient()
       console.log('Dynamic wallet client:', walletClient)
       
       if (!walletClient) {
@@ -57,7 +52,7 @@ const NFTMinter = () => {
       }
       
       // Get current chain info from the wallet client
-      const currentChain = walletClient.chain
+      const currentChain = (walletClient as any).chain
       console.log('Current chain from wallet client:', currentChain)
       
       if (!currentChain) {
@@ -77,7 +72,7 @@ const NFTMinter = () => {
       }
       
       // Get the contract address for the current network
-      const contractAddress = NFT_CONTRACTS[currentChain.id]
+      const contractAddress = NFT_CONTRACTS[currentChain.id as keyof typeof NFT_CONTRACTS]
       if (!contractAddress) {
         throw new Error(`No contract deployed on chain ${currentChain.id}`)
       }
@@ -85,9 +80,9 @@ const NFTMinter = () => {
       console.log('Using contract address:', contractAddress)
       
       // Create contract instance using viem (which Dynamic uses internally)
-      const { createPublicClient, http, getContract } = await import('viem')
+      const { createPublicClient, http } = await import('viem')
       
-      const publicClient = createPublicClient({
+      createPublicClient({
         chain: currentChain,
         transport: http()
       })
@@ -113,6 +108,20 @@ const NFTMinter = () => {
       console.log('Minting NFT to:', recipient)
       console.log('Transaction hash:', txHash)
       console.log('Network:', currentChain.name)
+      
+      // Celebrate NFT creation!
+      celebrateSuccess('nft')
+      
+      // Add to activity history
+      addActivity({
+        type: 'digital_asset_created',
+        title: 'Digital Asset Created',
+        description: 'Created a new digital collectible (NFT)',
+        recipient: recipient,
+        status: 'completed',
+        transactionHash: txHash,
+        network: currentChain.name
+      })
       
     } catch (error) {
       console.error('Minting failed:', error)
@@ -158,7 +167,7 @@ const NFTMinter = () => {
       
       {txHash && (
         <div className="tx-result">
-          <p>Transaction Hash: {txHash}</p>
+          <p>NFT minted! Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}</p>
           <a 
             href={networkId === 84532 
               ? `https://sepolia.basescan.org/tx/${txHash}`

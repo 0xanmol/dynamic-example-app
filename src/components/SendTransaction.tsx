@@ -1,21 +1,18 @@
 import { useState } from 'react'
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core'
-import { ethers } from 'ethers'
-
-// Extend window object to include ethereum
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
+import { useTransactionHistory } from '../contexts/TransactionContext'
+import { celebrateSuccess } from '../utils/confetti'
 
 const SendTransaction = () => {
   const { primaryWallet } = useDynamicContext()
+  const { addActivity } = useTransactionHistory()
   const [recipient, setRecipient] = useState('')
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [txHash, setTxHash] = useState('')
   const [networkId, setNetworkId] = useState<number | null>(null)
+
+  const isSmartWallet = primaryWallet?.connector?.name?.includes('ZeroDev')
 
   const sendTransaction = async () => {
     if (!primaryWallet || !recipient || !amount) return
@@ -24,15 +21,15 @@ const SendTransaction = () => {
     try {
       console.log('Primary wallet:', primaryWallet)
       console.log('Dynamic wallet address:', primaryWallet.address)
-      console.log('Dynamic wallet chain info:', primaryWallet.connector?.chain)
-      console.log('Dynamic wallet network:', primaryWallet.network)
+      console.log('Dynamic wallet chain info:', (primaryWallet.connector as any)?.chain)
+      console.log('Dynamic wallet network:', (primaryWallet as any).network)
       console.log('Dynamic connector:', primaryWallet.connector)
       
       // Use Dynamic's native wallet methods (same as NFT minting)
       console.log('🔄 Using Dynamic native wallet methods...')
       
       // Get the wallet client from Dynamic
-      const walletClient = await primaryWallet.getWalletClient()
+      const walletClient = await (primaryWallet as any).getWalletClient()
       console.log('Dynamic wallet client:', walletClient)
       
       if (!walletClient) {
@@ -69,6 +66,21 @@ const SendTransaction = () => {
       console.log('Transaction sent:', txHash)
       console.log('Network:', currentChain.name)
       
+      // Celebrate success!
+      celebrateSuccess('money')
+      
+      // Add to activity history
+      addActivity({
+        type: 'money_sent',
+        title: 'Money Sent',
+        description: 'Sent digital currency to another account',
+        amount: `${amount} ETH`,
+        recipient: recipient,
+        status: 'completed',
+        transactionHash: txHash,
+        network: currentChain.name
+      })
+      
     } catch (error) {
       console.error('Transaction failed:', error)
       alert('Transaction failed: ' + (error as Error).message)
@@ -85,15 +97,86 @@ const SendTransaction = () => {
     )
   }
 
+  if (isSmartWallet) {
+    return (
+      <div className="send-transaction">
+        <div className="smart-wallet-notice">
+          <div className="notice-header">
+            <span className="notice-icon">ℹ️</span>
+            <h3>Smart Wallet Detected</h3>
+          </div>
+          <p>You're connected with a ZeroDev smart wallet. For <strong>gasless transactions</strong>, please use the <strong>Account Abstraction</strong> tab instead.</p>
+          <p>This tab is designed for regular wallets that require manual gas fee payments.</p>
+        </div>
+        
+        <div className="regular-transaction-section">
+          <h4>Send Regular Transaction (with gas fees)</h4>
+          <p className="gas-warning">⚠️ This will require you to pay gas fees manually</p>
+          
+          <div className="form-group">
+            <label>Recipient Address:</label>
+            <input
+              type="text"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder="0x..."
+              className="form-input"
+            />
+          </div>
+          <div className="form-group">
+            <label>Amount (ETH):</label>
+            <input
+              type="text"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.001"
+              className="form-input"
+            />
+          </div>
+          <button 
+            onClick={sendTransaction} 
+            disabled={isLoading || !recipient || !amount}
+            className="send-btn warning"
+          >
+{isLoading ? 'Sending...' : 'Send with Gas Fees'}
+          </button>
+        </div>
+        
+        {txHash && (
+          <div className="tx-result">
+            <p>Regular transaction sent! Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}</p>
+            <a 
+              href={networkId === 84532 
+                ? `https://sepolia.basescan.org/tx/${txHash}`
+                : `https://sepolia.etherscan.io/tx/${txHash}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on {networkId === 84532 ? 'BaseScan' : 'Etherscan'}
+            </a>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="send-transaction">
+      <div className="regular-wallet-info">
+        <div className="wallet-type-badge">
+          <span className="badge-icon">🔑</span>
+          <span>Regular Wallet - Gas fees required</span>
+        </div>
+      </div>
+      
       <div className="form-group">
         <label>Recipient Address:</label>
         <input
           type="text"
           value={recipient}
           onChange={(e) => setRecipient(e.target.value)}
-          placeholder="0xfa5c0bf0461e50ef24d6ace61536210c93f309be"
+          placeholder="0x..."
           className="form-input"
         />
       </div>
@@ -104,7 +187,7 @@ const SendTransaction = () => {
           type="text"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.01"
+          placeholder="0.001"
           className="form-input"
         />
       </div>
@@ -114,12 +197,12 @@ const SendTransaction = () => {
         disabled={!recipient || !amount || isLoading}
         className="send-btn"
       >
-        {isLoading ? 'Sending...' : 'Send Transaction'}
+{isLoading ? 'Sending...' : 'Send Transaction (Gas Required)'}
       </button>
       
       {txHash && (
         <div className="tx-result">
-          <p>Transaction Hash: {txHash}</p>
+          <p>Transaction Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}</p>
           <a 
             href={networkId === 84532 
               ? `https://sepolia.basescan.org/tx/${txHash}`

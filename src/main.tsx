@@ -9,8 +9,9 @@ import App from './App.tsx'
 const dynamicSettings = {
   environmentId: import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID || '',
   walletConnectors: [EthereumWalletConnectors, ZeroDevSmartWalletConnectors],
-  // Debug settings
   initialAuthenticationMode: 'connect-only',
+  // Enhanced Account Abstraction settings
+  multiWallet: true,
 }
 
 createRoot(document.getElementById('root')!).render(

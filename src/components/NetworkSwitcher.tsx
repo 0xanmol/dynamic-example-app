@@ -33,7 +33,7 @@ const NetworkSwitcher = () => {
     
     setSwitching(true)
     try {
-      await switchNetwork({ wallet: primaryWallet, chain: chainId })
+      await switchNetwork({ wallet: primaryWallet, network: chainId })
       setIsOpen(false)
     } catch (error) {
       console.error('Failed to switch network:', error)
@@ -46,8 +46,8 @@ const NetworkSwitcher = () => {
     return null // Don't show if wallet not connected
   }
 
-  const currentNetwork = networks.find(n => n.chainId === primaryWallet.chain?.id)
-  const displayName = currentNetwork?.shortName || primaryWallet.chain?.name || 'Unknown'
+  const currentNetwork = networks.find(n => n.chainId === (primaryWallet as any).chain?.id)
+  const displayName = currentNetwork?.shortName || (primaryWallet as any).chain?.name || 'Unknown'
 
   return (
     <div className="network-dropdown">
@@ -64,7 +64,7 @@ const NetworkSwitcher = () => {
       {isOpen && (
         <div className="network-dropdown-menu">
           {networks.map((network) => {
-            const isActive = primaryWallet.chain?.id === network.chainId
+            const isActive = (primaryWallet as any).chain?.id === network.chainId
             
             return (
               <button

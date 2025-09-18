@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { DynamicWidget, useDynamicContext } from '@dynamic-labs/sdk-react-core'
+import { TransactionProvider } from './contexts/TransactionContext'
 import NFTMinter from './components/NFTMinter'
 import SendTransaction from './components/SendTransaction'
+import AccountAbstraction from './components/AccountAbstraction'
+import ActivityHistory from './components/ActivityHistory'
 import './App.css'
 
 function App() {
@@ -12,12 +15,17 @@ function App() {
     { id: 'auth', label: 'Authentication' },
     { id: 'mint', label: 'Mint NFT' },
     { id: 'send', label: 'Send Money' },
+    { id: 'aa', label: 'Account Abstraction' },
+    { id: 'activity', label: 'Activity History' },
   ]
 
   return (
     <div className="app">
       <div className="container">
-        <h1>Dynamic Labs Demo</h1>
+        <div className="header">
+          <h1>Enterprise Web3 Wallet Integration</h1>
+          <p className="subtitle">Powered by Dynamic Labs SDK</p>
+        </div>
         
         {user && (
           <div className="user-header">
@@ -37,7 +45,7 @@ function App() {
             <DynamicWidget />
           </div>
         ) : (
-          <>
+          <TransactionProvider>
             <div className="tabs">
               {tabs.map((tab) => (
                 <button
@@ -73,8 +81,21 @@ function App() {
                   <SendTransaction />
                 </div>
               )}
+              
+              {activeTab === 'aa' && (
+                <div className="tab-panel">
+                  <h2>Account Abstraction</h2>
+                  <AccountAbstraction />
+                </div>
+              )}
+              
+              {activeTab === 'activity' && (
+                <div className="tab-panel">
+                  <ActivityHistory />
+                </div>
+              )}
             </div>
-          </>
+          </TransactionProvider>
         )}
 
         <div className="info">
